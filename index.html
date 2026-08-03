@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Football Master ⚽</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+:root { --green: #0a5c36; --green-light: #1a8c4e; --gold: #ffd700; --dark: #0d1b0d; --darker: #060f06; }
+body { font-family: -apple-system, system-ui, sans-serif; background: var(--dark); color: white; min-height: 100vh; overflow-x: hidden; }
+body { background: radial-gradient(ellipse at center, #0a3d1f 0%, #061a0d 100%); }
+.screen { display: none; min-height: 100vh; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+.screen.active { display: flex; }
+h1 { font-size: 2.5em; text-align: center; margin-bottom: 10px; text-shadow: 0 0 20px rgba(255,215,0,0.5); }
+.subtitle { color: var(--gold); font-size: 1.1em; margin-bottom: 30px; text-align: center; }
+.btn { background: var(--green-light); color: white; border: none; padding: 18px 40px; font-size: 1.3em; border-radius: 50px; cursor: pointer; font-weight: bold; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.4); margin: 10px; }
+.btn:active { transform: scale(0.95); }
+.btn-gold { background: linear-gradient(135deg, #ffd700, #ffa500); color: #1a1a1a; }
+.btn-big { font-size: 1.8em; padding: 22px 60px; }
+input[type=text] { background: rgba(255,255,255,0.1); border: 2px solid var(--green-light); color: white; padding: 15px 20px; font-size: 1.1em; border-radius: 12px; margin: 8px; width: 80%; max-width: 300px; text-align: center; }
+input[type=text]::placeholder { color: rgba(255,255,255,0.4); }
+.turn-indicator { background: rgba(255,215,0,0.15); border: 2px solid var(--gold); border-radius: 15px; padding: 10px 25px; margin-bottom: 20px; font-size: 1.2em; text-align: center; }
+.turn-indicator span { color: var(--gold); font-weight: bold; }
+.question-num { color: rgba(255,255,255,0.5); font-size: 1em; margin-bottom: 5px; }
+.score-display { display: flex; gap: 30px; margin-bottom: 15px; }
+.score-pill { background: rgba(255,255,255,0.1); padding: 8px 20px; border-radius: 20px; font-size: 0.95em; }
+.score-pill.active { border: 2px solid var(--gold); }
+.question-card { background: rgba(255,255,255,0.08); border-radius: 20px; padding: 30px 20px; width: 100%; max-width: 500px; margin-bottom: 20px; }
+.question-text { font-size: 1.35em; text-align: center; margin-bottom: 25px; line-height: 1.4; }
+.options { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 500px; }
+.option { background: rgba(255,255,255,0.12); border: 2px solid rgba(255,255,255,0.2); color: white; padding: 16px 20px; font-size: 1.15em; border-radius: 15px; cursor: pointer; transition: all 0.3s; text-align: left; font-weight: 500; }
+.option:active { transform: scale(0.98); }
+.option.correct { background: #2d8f3e; border-color: #4fff5e; animation: flash 0.5s; }
+.option.wrong { background: #c0392b; border-color: #ff4444; animation: flash 0.5s; }
+.option.disabled { pointer-events: none; }
+.option.reveal { background: #2d8f3e; border-color: #4fff5e; }
+@keyframes flash { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+.timer-bar { width: 100%; max-width: 500px; height: 8px; background: rgba(255,255,255,0.2); border-radius: 4px; margin-bottom: 20px; overflow: hidden; }
+.timer-fill { height: 100%; background: var(--gold); border-radius: 4px; transition: width 1s linear; width: 100%; }
+.timer-fill.warning { background: #ff8800; }
+.timer-fill.danger { background: #ff3333; }
+.timer-text { font-size: 0.85em; color: rgba(255,255,255,0.6); margin-bottom: 10px; }
+.result-emoji { font-size: 4em; margin-bottom: 10px; }
+.result-title { font-size: 2em; color: var(--gold); margin-bottom: 10px; text-align: center; }
+.result-score { font-size: 1.5em; margin-bottom: 30px; text-align: center; }
+.winner-badge { background: linear-gradient(135deg, #ffd700, #ffa500); color: #1a1a1a; padding: 15px 40px; border-radius: 50px; font-size: 1.5em; font-weight: bold; margin-bottom: 20px; }
+.mute-btn { position: fixed; top: 15px; right: 15px; background: rgba(255,255,255,0.15); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; font-size: 1.2em; cursor: pointer; z-index: 100; }
+.feedback { font-size: 1.2em; text-align: center; margin-bottom: 15px; min-height: 30px; }
+.feedback.correct { color: #4fff5e; }
+.feedback.wrong { color: #ff6666; }
+.fade-in { animation: fadeIn 0.4s; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+.ball-spin { display: inline-block; animation: spin 2s linear infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<button class="mute-btn" id="muteBtn" onclick="toggleMute()">🔊</button>
+
+<!-- Start Screen -->
+<div class="screen active" id="startScreen">
+<div style="font-size:5em;margin-bottom:10px">⚽</div>
+<h1>Football Master</h1>
+<p class="subtitle">The Ultimate Football Quiz for Two! 🏆</p>
+<input type="text" id="player1" placeholder="Player 1 Name" maxlength="12" value="Charlie">
+<input type="text" id="player2" placeholder="Player 2 Name" maxlength="12" value="Indy">
+<button class="btn btn-gold btn-big" onclick="startGame()">PLAY! ⚽</button>
+<p style="margin-top:30px;color:rgba(255,255,255,0.4);font-size:0.85em;text-align:center;max-width:400px">Take turns answering football trivia questions. 10 questions each. Whoever scores the most wins!</p>
+</div>
+
+<!-- Quiz Screen -->
+<div class="screen" id="quizScreen">
+<div class="score-display">
+<div class="score-pill" id="pill1">👨 <span id="name1">P1</span>: <span id="score1">0</span></div>
+<div class="score-pill" id="pill2">👦 <span id="name2">P2</span>: <span id="score2">0</span></div>
+</div>
+<div class="turn-indicator"><span id="turnName">Player 1</span>'s turn! 🎯</div>
+<div class="question-num" id="questionNum">Question 1 of 10</div>
+<div class="timer-text" id="timerText">⏱ 15 seconds</div>
+<div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>
+<div class="question-card fade-in" id="questionCard">
+<p class="question-text" id="questionText"></p>
+</div>
+<div class="options" id="options"></div>
+<div class="feedback" id="feedback"></div>
+</div>
+
+<!-- Results Screen -->
+<div class="screen" id="resultsScreen">
+<div class="result-emoji" id="resultEmoji">🏆</div>
+<div class="winner-badge" id="winnerBadge"></div>
+<div class="result-score" id="finalScores"></div>
+<p id="resultMessage" style="font-size:1.2em;text-align:center;max-width:400px;margin-bottom:30px;color:rgba(255,255,255,0.8)"></p>
+<button class="btn btn-gold btn-big" onclick="restartGame()">PLAY AGAIN! 🔄</button>
+</div>
+
+<script>
+const QUESTIONS = [
+{q:"Which country won the first ever World Cup in 1930?",o:["Brazil","Uruguay","Italy","Argentina"],a:1},
+{q:"How many players are on a football pitch for one team (including goalkeeper)?",o:["9","10","11","12"],a:2},
+{q:"Who scored the famous 'Hand of God' goal in 1986?",o:["Pelé","Diego Maradona","Lionel Messi","Cristiano Ronaldo"],a:1},
+{q:"Which club plays their home games at Old Trafford?",o:["Liverpool","Manchester City","Manchester United","Chelsea"],a:2},
+{q:"What colour cards does a referee have?",o:["Red and Blue","Yellow and Red","Green and Yellow","Black and White"],a:1},
+{q:"Which country has won the most World Cups (5 times)?",o:["Germany","Italy","Argentina","Brazil"],a:3},
+{q:"Who is Arsenal's all-time top scorer with 185 goals?",o:["Thierry Henry","Dennis Bergkamp","Ian Wright","Robin van Persie"],a:0},
+{q:"What position does a player wear the number 1 shirt?",o:["Striker","Goalkeeper","Defender","Midfielder"],a:1},
+{q:"Which player is known as 'CR7'?",o:["Carlos Tevez","Cristiano Ronaldo","Carlos Puyol","Casemiro"],a:1},
+{q:"Which country hosted the 2022 World Cup?",o:["Russia","Qatar","USA","Japan"],a:1},
+{q:"How long is a standard football match (without extra time)?",o:["80 minutes","90 minutes","100 minutes","120 minutes"],a:1},
+{q:"What does VAR stand for?",o:["Video Assistant Referee","Very Angry Referee","Visual Action Replay","Video Action Review"],a:0},
+{q:"Which club's home ground is called Anfield?",o:["Everton","Liverpool","Manchester United","Leeds"],a:1},
+{q:"Who won the 2023 Ballon d'Or (best player in the world)?",o:["Lionel Messi","Erling Haaland","Cristiano Ronaldo","Kylian Mbappé"],a:0},
+{q:"What is the penalty area also known as?",o:["The Box","The Circle","The Zone","The Square"],a:0},
+{q:"Which English club is known as 'The Toffees'?",o:["Liverpool","Everton","Aston Villa","Newcastle"],a:1},
+{q:"How many teams compete in the English Premier League?",o:["16","18","20","22"],a:2},
+{q:"Which country's national team is called 'Les Bleus' (The Blues)?",o:["Italy","France","Spain","Portugal"],a:1},
+{q:"Who scored the most goals in a single Premier League season (36 goals in 2022-23)?",o:["Mohamed Salah","Harry Kane","Erling Haaland","Sergio Agüero"],a:2},
+{q:"What happens if a defender touches the ball with their hand in their own penalty area?",o:["Nothing","Throw-in","Penalty kick","Yellow card only"],a:2},
+{q:"Which club won the first ever Premier League season in 1992-93?",o:["Arsenal","Manchester United","Liverpool","Chelsea"],a:1},
+{q:"Which player is famous for the 'Siuuu' celebration?",o:["Lionel Messi","Cristiano Ronaldo","Neymar","Kylian Mbappé"],a:1},
+{q:"What is the maximum number of substitutes a team can make in a normal match?",o:["3","4","5","6"],a:2},
+{q:"Which club plays at the Emirates Stadium?",o:["Tottenham","Chelsea","Arsenal","West Ham"],a:2},
+{q:"Who is the only player to win the World Cup 3 times?",o:["Pelé","Diego Maradona","Lionel Messi","Zinedine Zidane"],a:0},
+{q:"What colour is a goalkeeper's card for being sent off?",o:["Yellow","Green","Red","Blue"],a:2},
+{q:"Which country won Euro 2024?",o:["England","France","Spain","Germany"],a:2},
+{q:"Who is Arsenal's current manager (2026)?",o:["Pep Guardiola","Mikel Arteta","Jurgen Klopp","Antonio Conte"],a:1},
+{q:"What is a 'hat-trick' in football?",o:["1 goal in a match","2 goals in a match","3 goals in a match","5 goals in a match"],a:2},
+{q:"Which two countries play in 'El Clásico'?",o:["England vs Germany","Spain vs Portugal","Real Madrid vs Barcelona","Brazil vs Argentina"],a:2},
+{q:"Who is England's all-time top scorer?",o:["Wayne Rooney","Harry Kane","Gary Lineker","Bobby Charlton"],a:1},
+{q:"What does 'FT' mean on a football scoreboard?",o:["Full Time","First Touch","Fast Track","Final Timer"],a:0},
+{q:"Which club is nicknamed 'The Reds' and plays at Anfield?",o:["Manchester United","Liverpool","Nottingham Forest","Bristol City"],a:1},
+{q:"How far is the penalty spot from the goal line?",o:["10 yards (9m)","11 metres (12 yards)","12 yards (11m)","18 yards (16m)"],a:2},
+{q:"Which player scored the fastest hat-trick in Premier League history (2 mins 14 secs)?",o:["Sadio Mané","Robbie Fowler","Sergio Agüero","Alan Shearer"],a:0},
+{q:"What is the offside rule triggered by?",o:["Being in the opponent's half","Being behind the last defender when the ball is passed","Touching the ball with hands","Arguing with the referee"],a:1},
+{q:"Which club won the Champions League in 2024?",o:["Manchester City","Real Madrid","Bayern Munich","PSG"],a:1},
+{q:"Who scored the winning goal in the 2022 World Cup Final?",o:["Lionel Messi","Kylian Mbappé","Ángel Di María","Gonzalo Montiel"],a:3},
+{q:"What does a yellow card mean?",o:["You're sent off","Warning — second one means sent off","Free kick to the other team","5 minute sin bin"],a:1},
+{q:"Which country has never won a World Cup?",o:["Brazil","Germany","Netherlands","Italy"],a:2},
+{q:"Who is Tottenham's all-time top scorer?",o:["Harry Kane","Son Heung-min","Jimmy Greaves","Robbie Keane"],a:2},
+{q:"What is the width of a standard football goal (between the posts)?",o:["24 feet (7.32m)","20 feet (6.1m)","28 feet (8.5m)","18 feet (5.5m)"],a:0},
+{q:"Which manager famously said 'Football, bloody hell!'?",o:["Alex Ferguson","Arsène Wenger","José Mourinho","Pep Guardiola"],a:0},
+{q:"Which club is known as 'The Magpies'?",o:["Newcastle United","Crystal Palace","Southampton","Brighton"],a:0},
+{q:"Who scored the Golden Boot at the 2022 World Cup (8 goals)?",o:["Lionel Messi","Kylian Mbappé","Julián Álvarez","Olivier Giroud"],a:1},
+{q:"What does 'FIFA' stand for?",o:["Federation of International Football Associations","Fédération Internationale de Football Association","Football International Federation Association","Federation of International Football Academies"],a:1},
+{q:"Which Arsenal player is known for being fouled a lot and is nicknamed 'Starboy'?",o:["Bukayo Saka","Gabriel Martinelli","Martin Ødegaard","Declan Rice"],a:0},
+{q:"How many minutes are in each half of a football match?",o:["40 minutes","45 minutes","50 minutes","60 minutes"],a:1},
+{q:"Which club won the Premier League in the 2025-26 season?",o:["Arsenal","Manchester City","Liverpool","Chelsea"],a:0},
+{q:"What is the circle in the centre of the pitch called?",o:["Centre Spot","Centre Circle","Middle Ring","Halfway Hoop"],a:1},
+];
+
+let state = {};
+let timerInterval;
+let soundOn = true;
+let audioCtx;
+
+function initAudio() {
+    if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {} }
+}
+
+function beep(freq, duration, type='sine', vol=0.15) {
+    if (!soundOn || !audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+}
+
+function soundCorrect() { beep(523, 0.1); setTimeout(() => beep(659, 0.1), 100); setTimeout(() => beep(784, 0.2), 200); }
+function soundWrong() { beep(220, 0.15, 'sawtooth', 0.2); setTimeout(() => beep(180, 0.25, 'sawtooth', 0.2), 150); }
+function soundTick() { beep(800, 0.05, 'square', 0.08); }
+function soundDing() { beep(880, 0.1); setTimeout(() => beep(1100, 0.15), 100); }
+function soundEnd() { beep(523, 0.1); setTimeout(() => beep(659, 0.1), 100); setTimeout(() => beep(784, 0.1), 200); setTimeout(() => beep(1046, 0.3), 300); }
+
+function toggleMute() {
+    soundOn = !soundOn;
+    document.getElementById('muteBtn').textContent = soundOn ? '🔊' : '🔇';
+}
+
+function startGame() {
+    initAudio();
+    soundDing();
+    state = {
+        p1Name: document.getElementById('player1').value.trim() || 'Player 1',
+        p2Name: document.getElementById('player2').value.trim() || 'Player 2',
+        p1Score: 0,
+        p2Score: 0,
+        currentPlayer: 0,
+        questionNum: 0,
+        questionsPerPlayer: 10,
+        selectedQuestions: shuffle([...QUESTIONS]).slice(0, 20),
+        answered: false,
+    };
+    document.getElementById('name1').textContent = state.p1Name;
+    document.getElementById('name2').textContent = state.p2Name;
+    document.getElementById('score1').textContent = 0;
+    document.getElementById('score2').textContent = 0;
+    showScreen('quizScreen');
+    nextQuestion();
+}
+
+function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function nextQuestion() {
+    if (state.questionNum >= state.selectedQuestions.length) {
+        showResults();
+        return;
+    }
+    state.answered = false;
+    const q = state.selectedQuestions[state.questionNum];
+    const playerName = state.currentPlayer === 0 ? state.p1Name : state.p2Name;
+    const playerEmoji = state.currentPlayer === 0 ? '👨' : '👦';
+
+    document.getElementById('turnName').textContent = playerName;
+    document.getElementById('questionNum').textContent = `Question ${state.questionNum + 1} of ${state.selectedQuestions.length}`;
+    document.getElementById('feedback').textContent = '';
+    document.getElementById('feedback').className = 'feedback';
+
+    // Highlight active player
+    document.getElementById('pill1').classList.toggle('active', state.currentPlayer === 0);
+    document.getElementById('pill2').classList.toggle('active', state.currentPlayer === 1);
+
+    // Shuffle options
+    const options = q.o.map((text, i) => ({ text, correct: i === q.a }));
+    shuffle(options);
+
+    const card = document.getElementById('questionCard');
+    card.classList.remove('fade-in');
+    void card.offsetWidth;
+    card.classList.add('fade-in');
+
+    document.getElementById('questionText').textContent = q.q;
+
+    const optsDiv = document.getElementById('options');
+    optsDiv.innerHTML = '';
+    options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'option';
+        btn.textContent = opt.text;
+        btn.onclick = () => selectAnswer(btn, opt.correct, options);
+        optsDiv.appendChild(btn);
+    });
+
+    startTimer();
+}
+
+function startTimer() {
+    let timeLeft = 15;
+    const fill = document.getElementById('timerFill');
+    const text = document.getElementById('timerText');
+    fill.style.width = '100%';
+    fill.className = 'timer-fill';
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        const pct = (timeLeft / 15) * 100;
+        fill.style.width = pct + '%';
+        text.textContent = `⏱ ${timeLeft} seconds`;
+        if (timeLeft <= 5) { fill.classList.add('danger'); if (timeLeft > 0) soundTick(); }
+        else if (timeLeft <= 8) { fill.classList.add('warning'); }
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            timeUp();
+        }
+    }, 1000);
+}
+
+function timeUp() {
+    if (state.answered) return;
+    state.answered = true;
+    const options = document.querySelectorAll('.option');
+    options.forEach(o => {
+        o.classList.add('disabled');
+        if (o.textContent === QUESTIONS.find(q => q.q === document.getElementById('questionText').textContent).o[QUESTIONS.find(q => q.q === document.getElementById('questionText').textContent).a]) {
+            o.classList.add('reveal');
+        }
+    });
+    document.getElementById('feedback').textContent = `⏰ Time's up! ⚽`;
+    document.getElementById('feedback').className = 'feedback wrong';
+    soundWrong();
+    setTimeout(() => { advanceTurn(); }, 2500);
+}
+
+function selectAnswer(btn, correct, allOptions) {
+    if (state.answered) return;
+    state.answered = true;
+    clearInterval(timerInterval);
+    document.querySelectorAll('.option').forEach(o => o.classList.add('disabled'));
+
+    if (correct) {
+        btn.classList.add('correct');
+        if (state.currentPlayer === 0) { state.p1Score++; document.getElementById('score1').textContent = state.p1Score; }
+        else { state.p2Score++; document.getElementById('score2').textContent = state.p2Score; }
+        document.getElementById('feedback').textContent = '✅ Correct! Brilliant! ⚽';
+        document.getElementById('feedback').className = 'feedback correct';
+        soundCorrect();
+    } else {
+        btn.classList.add('wrong');
+        allOptions.forEach((opt, i) => {
+            if (opt.correct) document.querySelectorAll('.option')[i].classList.add('reveal');
+        });
+        document.getElementById('feedback').textContent = '❌ Oops! The correct answer is highlighted in green.';
+        document.getElementById('feedback').className = 'feedback wrong';
+        soundWrong();
+    }
+
+    setTimeout(() => { advanceTurn(); }, 2500);
+}
+
+function advanceTurn() {
+    state.questionNum++;
+    state.currentPlayer = state.currentPlayer === 0 ? 1 : 0;
+    nextQuestion();
+}
+
+function showResults() {
+    soundEnd();
+    let winner, emoji, msg;
+    if (state.p1Score > state.p2Score) {
+        winner = `${state.p1Name} Wins! 🏆`;
+        emoji = '🏆';
+        msg = `Amazing football knowledge! ${state.p2Name}, time for a rematch?`;
+    } else if (state.p2Score > state.p1Score) {
+        winner = `${state.p2Name} Wins! 🏆`;
+        emoji = '🏆';
+        msg = `Incredible! ${state.p1Name}, can you catch up next time?`;
+    } else {
+        winner = "It's a Draw! 🤝";
+        emoji = '🤝';
+        msg = "You're both football legends! Play again to break the tie!";
+    }
+
+    document.getElementById('resultEmoji').textContent = emoji;
+    document.getElementById('winnerBadge').textContent = winner;
+    document.getElementById('finalScores').innerHTML = `👨 ${state.p1Name}: <strong>${state.p1Score}</strong> &nbsp; vs &nbsp; 👦 ${state.p2Name}: <strong>${state.p2Score}</strong>`;
+    document.getElementById('resultMessage').textContent = msg;
+    showScreen('resultsScreen');
+}
+
+function restartGame() {
+    soundDing();
+    showScreen('startScreen');
+}
+
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+</script>
+</body>
+</html>
