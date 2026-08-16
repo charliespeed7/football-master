@@ -22,8 +22,8 @@ input[type=text]::placeholder { color: rgba(255,255,255,0.4); }
 .turn-indicator { background: rgba(255,215,0,0.15); border: 2px solid var(--gold); border-radius: 15px; padding: 10px 25px; margin-bottom: 20px; font-size: 1.2em; text-align: center; }
 .turn-indicator span { color: var(--gold); font-weight: bold; }
 .question-num { color: rgba(255,255,255,0.5); font-size: 1em; margin-bottom: 5px; }
-.score-display { display: flex; gap: 30px; margin-bottom: 15px; }
-.score-pill { background: rgba(255,255,255,0.1); padding: 8px 20px; border-radius: 20px; font-size: 0.95em; }
+.score-display { display: flex; gap: 12px; margin-bottom: 15px; flex-wrap: wrap; justify-content: center; }
+.score-pill { background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; font-size: 0.9em; }
 .score-pill.active { border: 2px solid var(--gold); }
 .question-card { background: rgba(255,255,255,0.08); border-radius: 20px; padding: 30px 20px; width: 100%; max-width: 500px; margin-bottom: 20px; }
 .question-text { font-size: 1.35em; text-align: center; margin-bottom: 25px; line-height: 1.4; }
@@ -50,8 +50,6 @@ input[type=text]::placeholder { color: rgba(255,255,255,0.4); }
 .feedback.wrong { color: #ff6666; }
 .fade-in { animation: fadeIn 0.4s; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-.ball-spin { display: inline-block; animation: spin 2s linear infinite; }
-@keyframes spin { 100% { transform: rotate(360deg); } }
 .level-badge { display: inline-block; padding: 4px 16px; border-radius: 12px; font-size: 0.8em; font-weight: bold; margin-bottom: 10px; }
 .level-easy { background: #2d8f3e; color: white; }
 .level-medium { background: #ff8800; color: white; }
@@ -66,6 +64,11 @@ input[type=text]::placeholder { color: rgba(255,255,255,0.4); }
 .diff-btn.hard { border-color: #c0392b; }
 .diff-btn.legend { border-color: #ffd700; }
 .streak-display { font-size: 1em; color: var(--gold); margin-bottom: 10px; text-align: center; }
+.player-count-grid { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 400px; margin-bottom: 20px; }
+.player-count-btn { background: rgba(255,255,255,0.12); border: 2px solid rgba(255,255,255,0.3); color: white; padding: 20px; font-size: 1.2em; border-radius: 15px; cursor: pointer; transition: all 0.3s; text-align: center; font-weight: bold; }
+.player-count-btn:active { transform: scale(0.97); }
+.player-count-btn .pc-desc { font-size: 0.75em; font-weight: normal; opacity: 0.7; margin-top: 5px; }
+.player-count-btn.active { border-color: var(--gold); background: rgba(255,215,0,0.15); }
 </style>
 </head>
 <body>
@@ -75,11 +78,12 @@ input[type=text]::placeholder { color: rgba(255,255,255,0.4); }
 <div class="screen active" id="startScreen">
 <div style="font-size:5em;margin-bottom:10px">⚽</div>
 <h1>Football Master</h1>
-<p class="subtitle">The Ultimate Football Quiz for Two! 🏆</p>
+<p class="subtitle">The Ultimate Football Quiz! 🏆</p>
 <input type="text" id="player1" placeholder="Player 1 Name" maxlength="12" value="Charlie">
 <input type="text" id="player2" placeholder="Player 2 Name" maxlength="12" value="Indy">
+<input type="text" id="player3" placeholder="Player 3 (optional)" maxlength="12" value="Imer">
 <button class="btn btn-gold btn-big" onclick="showDifficulty()">PLAY! ⚽</button>
-<p style="margin-top:30px;color:rgba(255,255,255,0.4);font-size:0.85em;text-align:center;max-width:400px">Take turns answering football trivia. 10 questions each. Pick your difficulty!</p>
+<p style="margin-top:30px;color:rgba(255,255,255,0.4);font-size:0.85em;text-align:center;max-width:400px">Take turns answering football trivia. Pick your difficulty. Leave Player 3 blank for a 2-player game!</p>
 </div>
 
 <!-- Difficulty Screen -->
@@ -108,10 +112,7 @@ input[type=text]::placeholder { color: rgba(255,255,255,0.4); }
 
 <!-- Quiz Screen -->
 <div class="screen" id="quizScreen">
-<div class="score-display">
-<div class="score-pill" id="pill1">👨 <span id="name1">P1</span>: <span id="score1">0</span></div>
-<div class="score-pill" id="pill2">👦 <span id="name2">P2</span>: <span id="score2">0</span></div>
-</div>
+<div class="score-display" id="scoreDisplay"></div>
 <div class="turn-indicator"><span id="turnName">Player 1</span>'s turn! 🎯</div>
 <div class="level-badge" id="levelBadge"></div>
 <div class="streak-display" id="streakDisplay"></div>
@@ -267,7 +268,7 @@ const LEGEND = [
 {q:"Who scored the last goal at Arsenal's old Highbury stadium?",o:["Thierry Henry","Robert Pires","Cesc Fàbregas","Dennis Bergkamp"],a:1},
 {q:"Which player won the Premier League Golden Boot in 2020-21 with 23 goals?",o:["Mohamed Salah","Harry Kane","Bruno Fernandes","Son Heung-min"],a:1},
 {q:"Who was the first non-British manager to win the Premier League (with Blackburn in 1995)?",o:["Arsène Wenger","Gérard Houllier","Kenny Dalglish","Sven-Göran Eriksson"],a:2},
-{q:"Which club reached the Champions League final for the first time in their history in 2024 (and lost to Real Madrid)?",o:["Atlético Madrid","PSG","Inter Milan","Napoli"],a:1},
+{q:"Which club reached the Champions League final for the first time in their history in 2024 (and lost to Real Madrid)?",o:["Atlético Madrid","PSSG","Inter Milan","Napoli"],a:1},
 ];
 
 const LEVELS = {
@@ -276,6 +277,8 @@ medium: { questions: MEDIUM, time: 15, label: "MEDIUM", class: "level-medium" },
 hard: { questions: HARD, time: 10, label: "HARD", class: "level-hard" },
 legend: { questions: LEGEND, time: 8, label: "LEGEND", class: "level-legend" },
 };
+
+const EMOJIS = ["👨","👩","👦","👧","🧑","🧔","👨‍🔧","👩‍🔧"];
 
 let state = {};
 let timerInterval;
@@ -322,30 +325,50 @@ function startGame(level) {
     initAudio();
     soundDing();
     const lvl = LEVELS[level];
+
+    let players = [];
+    const n1 = document.getElementById('player1').value.trim() || 'Player 1';
+    const n2 = document.getElementById('player2').value.trim() || 'Player 2';
+    const n3 = document.getElementById('player3').value.trim();
+
+    players.push({ name: n1, emoji: EMOJIS[0], score: 0, streak: 0 });
+    players.push({ name: n2, emoji: EMOJIS[1], score: 0, streak: 0 });
+    if (n3) {
+        players.push({ name: n3, emoji: EMOJIS[2], score: 0, streak: 0 });
+    }
+
+    const questionsPerPlayer = 10;
+    const totalQuestions = players.length * questionsPerPlayer;
+
     state = {
         level: level,
-        p1Name: document.getElementById('player1').value.trim() || 'Player 1',
-        p2Name: document.getElementById('player2').value.trim() || 'Player 2',
-        p1Score: 0,
-        p2Score: 0,
-        p1Streak: 0,
-        p2Streak: 0,
+        players: players,
         currentPlayer: 0,
         questionNum: 0,
-        questionsPerPlayer: 10,
-        selectedQuestions: shuffle([...lvl.questions]).slice(0, 20),
+        totalQuestions: totalQuestions,
+        selectedQuestions: shuffle([...lvl.questions]).slice(0, Math.min(totalQuestions, lvl.questions.length)),
         timePerQuestion: lvl.time,
         answered: false,
     };
-    document.getElementById('name1').textContent = state.p1Name;
-    document.getElementById('name2').textContent = state.p2Name;
-    document.getElementById('score1').textContent = 0;
-    document.getElementById('score2').textContent = 0;
+
+    buildScoreDisplay();
     const badge = document.getElementById('levelBadge');
     badge.textContent = lvl.label;
     badge.className = 'level-badge ' + lvl.class;
     showScreen('quizScreen');
     nextQuestion();
+}
+
+function buildScoreDisplay() {
+    const div = document.getElementById('scoreDisplay');
+    div.innerHTML = '';
+    state.players.forEach((p, i) => {
+        const pill = document.createElement('div');
+        pill.className = 'score-pill';
+        pill.id = 'pill' + i;
+        pill.innerHTML = `${p.emoji} ${p.name}: <span id="score${i}">${p.score}</span>`;
+        div.appendChild(pill);
+    });
 }
 
 function shuffle(arr) {
@@ -357,25 +380,29 @@ function shuffle(arr) {
 }
 
 function nextQuestion() {
-    if (state.questionNum >= state.selectedQuestions.length) {
+    if (state.questionNum >= state.totalQuestions) {
         showResults();
         return;
     }
     state.answered = false;
-    const q = state.selectedQuestions[state.questionNum];
-    const playerName = state.currentPlayer === 0 ? state.p1Name : state.p2Name;
+    const q = state.selectedQuestions[state.questionNum % state.selectedQuestions.length];
+    const player = state.players[state.currentPlayer];
 
-    document.getElementById('turnName').textContent = playerName;
-    document.getElementById('questionNum').textContent = `Question ${state.questionNum + 1} of ${state.selectedQuestions.length}`;
+    document.getElementById('turnName').textContent = player.name;
+    document.getElementById('questionNum').textContent = `Question ${state.questionNum + 1} of ${state.totalQuestions}`;
     document.getElementById('feedback').textContent = '';
     document.getElementById('feedback').className = 'feedback';
 
-    const p1Streak = state.p1Streak >= 3 ? `🔥 ${state.p1Name} on a ${state.p1Streak} streak!` : '';
-    const p2Streak = state.p2Streak >= 3 ? `🔥 ${state.p2Name} on a ${state.p2Streak} streak!` : '';
-    document.getElementById('streakDisplay').textContent = p1Streak || p2Streak;
+    let streakText = '';
+    state.players.forEach(p => {
+        if (p.streak >= 3) streakText = `🔥 ${p.name} on a ${p.streak} streak!`;
+    });
+    document.getElementById('streakDisplay').textContent = streakText;
 
-    document.getElementById('pill1').classList.toggle('active', state.currentPlayer === 0);
-    document.getElementById('pill2').classList.toggle('active', state.currentPlayer === 1);
+    state.players.forEach((p, i) => {
+        const pill = document.getElementById('pill' + i);
+        if (pill) pill.classList.toggle('active', i === state.currentPlayer);
+    });
 
     const options = q.o.map((text, i) => ({ text, correct: i === q.a }));
     shuffle(options);
@@ -393,7 +420,7 @@ function nextQuestion() {
         const btn = document.createElement('button');
         btn.className = 'option';
         btn.textContent = opt.text;
-        btn.onclick = () => selectAnswer(btn, opt.correct, options);
+        btn.onclick = () => selectAnswer(btn, opt.correct, options, q);
         optsDiv.appendChild(btn);
     });
 
@@ -424,57 +451,43 @@ function startTimer() {
 function timeUp() {
     if (state.answered) return;
     state.answered = true;
-    const currentQ = state.selectedQuestions[state.questionNum];
-    const options = document.querySelectorAll('.option');
-    options.forEach(o => {
+    const currentQ = state.selectedQuestions[state.questionNum % state.selectedQuestions.length];
+    const correctText = currentQ.o[currentQ.a];
+    document.querySelectorAll('.option').forEach(o => {
         o.classList.add('disabled');
+        if (o.textContent === correctText) o.classList.add('reveal');
     });
-    options.forEach((o, i) => {
-        const opts = document.getElementById('options');
-        const allOpts = Array.from(opts.children);
-        allOpts.forEach((btn, idx) => {
-            const correctText = currentQ.o[currentQ.a];
-            if (btn.textContent === correctText) btn.classList.add('reveal');
-        });
-    });
-    if (state.currentPlayer === 0) state.p1Streak = 0;
-    else state.p2Streak = 0;
+    state.players[state.currentPlayer].streak = 0;
     document.getElementById('feedback').textContent = `⏰ Time's up! ⚽`;
     document.getElementById('feedback').className = 'feedback wrong';
     soundWrong();
     setTimeout(() => { advanceTurn(); }, 2500);
 }
 
-function selectAnswer(btn, correct, allOptions) {
+function selectAnswer(btn, correct, allOptions, qObj) {
     if (state.answered) return;
     state.answered = true;
     clearInterval(timerInterval);
     document.querySelectorAll('.option').forEach(o => o.classList.add('disabled'));
 
+    const player = state.players[state.currentPlayer];
+
     if (correct) {
         btn.classList.add('correct');
-        if (state.currentPlayer === 0) {
-            state.p1Score++;
-            state.p1Streak++;
-            document.getElementById('score1').textContent = state.p1Score;
-            if (state.p1Streak >= 3) soundStreak();
-        } else {
-            state.p2Score++;
-            state.p2Streak++;
-            document.getElementById('score2').textContent = state.p2Score;
-            if (state.p2Streak >= 3) soundStreak();
-        }
+        player.score++;
+        player.streak++;
+        const scoreEl = document.getElementById('score' + state.currentPlayer);
+        if (scoreEl) scoreEl.textContent = player.score;
+        if (player.streak >= 3) soundStreak(); else soundCorrect();
         const praises = ['✅ Correct! Brilliant! ⚽','✅ Top class! 🌟','✅ Football genius! 🧠','✅ Sensational! 🔥','✅ You nailed it! ⚡'];
         document.getElementById('feedback').textContent = praises[Math.floor(Math.random() * praises.length)];
         document.getElementById('feedback').className = 'feedback correct';
-        if (state.p1Streak < 3 && state.p2Streak < 3) soundCorrect();
     } else {
         btn.classList.add('wrong');
         allOptions.forEach((opt, i) => {
             if (opt.correct) document.querySelectorAll('.option')[i].classList.add('reveal');
         });
-        if (state.currentPlayer === 0) state.p1Streak = 0;
-        else state.p2Streak = 0;
+        player.streak = 0;
         const wrongs = ['❌ Oops! The correct answer is highlighted in green.','❌ Not quite! Good try though.','❌ Close but no cigar! See the answer in green.','❌ Unlucky! Check the correct answer below.'];
         document.getElementById('feedback').textContent = wrongs[Math.floor(Math.random() * wrongs.length)];
         document.getElementById('feedback').className = 'feedback wrong';
@@ -486,31 +499,34 @@ function selectAnswer(btn, correct, allOptions) {
 
 function advanceTurn() {
     state.questionNum++;
-    state.currentPlayer = state.currentPlayer === 0 ? 1 : 0;
+    state.currentPlayer = (state.currentPlayer + 1) % state.players.length;
     nextQuestion();
 }
 
 function showResults() {
     soundEnd();
-    let winner, emoji, msg;
-    if (state.p1Score > state.p2Score) {
-        winner = `${state.p1Name} Wins! 🏆`;
-        emoji = '🏆';
-        msg = `Amazing football knowledge! ${state.p2Name}, time for a rematch?`;
-    } else if (state.p2Score > state.p1Score) {
-        winner = `${state.p2Name} Wins! 🏆`;
-        emoji = '🏆';
-        msg = `Incredible! ${state.p1Name}, can you catch up next time?`;
-    } else {
-        winner = "It's a Draw! 🤝";
+    const players = state.players;
+    const sorted = [...players].sort((a, b) => b.score - a.score);
+    const isTie = sorted.length > 1 && sorted[0].score === sorted[1].score;
+    const lvl = LEVELS[state.level];
+
+    let emoji, winner, msg;
+    if (isTie) {
         emoji = '🤝';
-        msg = "You're both football legends! Play again to break the tie!";
+        winner = "It's a Draw! 🤝";
+        msg = "You're all football legends! Play again to break the tie!";
+    } else {
+        emoji = '🏆';
+        winner = `${sorted[0].name} Wins! 🏆`;
+        msg = `Amazing football knowledge! Can anyone catch ${sorted[0].name} next time?`;
     }
 
-    const lvl = LEVELS[state.level];
     document.getElementById('resultEmoji').textContent = emoji;
     document.getElementById('winnerBadge').textContent = winner;
-    document.getElementById('finalScores').innerHTML = `👨 ${state.p1Name}: <strong>${state.p1Score}</strong> &nbsp; vs &nbsp; 👦 ${state.p2Name}: <strong>${state.p2Score}</strong><br><span style="font-size:0.7em;opacity:0.6">Level: ${lvl.label}</span>`;
+
+    let scoresHtml = sorted.map(p => `${p.emoji} ${p.name}: <strong>${p.score}</strong>`).join('<br>');
+    scoresHtml += `<br><span style="font-size:0.7em;opacity:0.6">Level: ${lvl.label}</span>`;
+    document.getElementById('finalScores').innerHTML = scoresHtml;
     document.getElementById('resultMessage').textContent = msg;
     showScreen('resultsScreen');
 }
