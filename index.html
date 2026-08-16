@@ -52,6 +52,20 @@ input[type=text]::placeholder { color: rgba(255,255,255,0.4); }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 .ball-spin { display: inline-block; animation: spin 2s linear infinite; }
 @keyframes spin { 100% { transform: rotate(360deg); } }
+.level-badge { display: inline-block; padding: 4px 16px; border-radius: 12px; font-size: 0.8em; font-weight: bold; margin-bottom: 10px; }
+.level-easy { background: #2d8f3e; color: white; }
+.level-medium { background: #ff8800; color: white; }
+.level-hard { background: #c0392b; color: white; }
+.level-legend { background: linear-gradient(135deg, #ffd700, #ff4500); color: #1a1a1a; }
+.difficulty-grid { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 400px; }
+.diff-btn { background: rgba(255,255,255,0.12); border: 2px solid rgba(255,255,255,0.3); color: white; padding: 20px; font-size: 1.2em; border-radius: 15px; cursor: pointer; transition: all 0.3s; text-align: center; font-weight: bold; }
+.diff-btn:active { transform: scale(0.97); }
+.diff-btn .diff-desc { font-size: 0.75em; font-weight: normal; opacity: 0.7; margin-top: 5px; }
+.diff-btn.easy { border-color: #2d8f3e; }
+.diff-btn.medium { border-color: #ff8800; }
+.diff-btn.hard { border-color: #c0392b; }
+.diff-btn.legend { border-color: #ffd700; }
+.streak-display { font-size: 1em; color: var(--gold); margin-bottom: 10px; text-align: center; }
 </style>
 </head>
 <body>
@@ -64,8 +78,32 @@ input[type=text]::placeholder { color: rgba(255,255,255,0.4); }
 <p class="subtitle">The Ultimate Football Quiz for Two! 🏆</p>
 <input type="text" id="player1" placeholder="Player 1 Name" maxlength="12" value="Charlie">
 <input type="text" id="player2" placeholder="Player 2 Name" maxlength="12" value="Indy">
-<button class="btn btn-gold btn-big" onclick="startGame()">PLAY! ⚽</button>
-<p style="margin-top:30px;color:rgba(255,255,255,0.4);font-size:0.85em;text-align:center;max-width:400px">Take turns answering football trivia questions. 10 questions each. Whoever scores the most wins!</p>
+<button class="btn btn-gold btn-big" onclick="showDifficulty()">PLAY! ⚽</button>
+<p style="margin-top:30px;color:rgba(255,255,255,0.4);font-size:0.85em;text-align:center;max-width:400px">Take turns answering football trivia. 10 questions each. Pick your difficulty!</p>
+</div>
+
+<!-- Difficulty Screen -->
+<div class="screen" id="diffScreen">
+<h1 style="font-size:1.8em;margin-bottom:20px">Choose Your Level</h1>
+<div class="difficulty-grid">
+<div class="diff-btn easy" onclick="startGame('easy')">
+🟢 EASY
+<div class="diff-desc">For beginners. 20 seconds per question.</div>
+</div>
+<div class="diff-btn medium" onclick="startGame('medium')">
+🟠 MEDIUM
+<div class="diff-desc">Getting trickier. 15 seconds per question.</div>
+</div>
+<div class="diff-btn hard" onclick="startGame('hard')">
+🔴 HARD
+<div class="diff-desc">For real football brains. 10 seconds per question.</div>
+</div>
+<div class="diff-btn legend" onclick="startGame('legend')">
+🟡 LEGEND
+<div class="diff-desc">Only for true football masters. 8 seconds per question.</div>
+</div>
+</div>
+<button class="btn" style="margin-top:25px;font-size:1em" onclick="showScreen('startScreen')">← Back</button>
 </div>
 
 <!-- Quiz Screen -->
@@ -75,7 +113,9 @@ input[type=text]::placeholder { color: rgba(255,255,255,0.4); }
 <div class="score-pill" id="pill2">👦 <span id="name2">P2</span>: <span id="score2">0</span></div>
 </div>
 <div class="turn-indicator"><span id="turnName">Player 1</span>'s turn! 🎯</div>
-<div class="question-num" id="questionNum">Question 1 of 10</div>
+<div class="level-badge" id="levelBadge"></div>
+<div class="streak-display" id="streakDisplay"></div>
+<div class="question-num" id="questionNum">Question 1 of 20</div>
 <div class="timer-text" id="timerText">⏱ 15 seconds</div>
 <div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>
 <div class="question-card fade-in" id="questionCard">
@@ -91,62 +131,151 @@ input[type=text]::placeholder { color: rgba(255,255,255,0.4); }
 <div class="winner-badge" id="winnerBadge"></div>
 <div class="result-score" id="finalScores"></div>
 <p id="resultMessage" style="font-size:1.2em;text-align:center;max-width:400px;margin-bottom:30px;color:rgba(255,255,255,0.8)"></p>
-<button class="btn btn-gold btn-big" onclick="restartGame()">PLAY AGAIN! 🔄</button>
+<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+<button class="btn btn-gold btn-big" onclick="restartGame()">PLAY AGAIN 🔄</button>
+<button class="btn" onclick="showScreen('diffScreen')">CHANGE LEVEL</button>
+</div>
 </div>
 
 <script>
-const QUESTIONS = [
+const EASY = [
 {q:"Which country won the first ever World Cup in 1930?",o:["Brazil","Uruguay","Italy","Argentina"],a:1},
 {q:"How many players are on a football pitch for one team (including goalkeeper)?",o:["9","10","11","12"],a:2},
 {q:"Who scored the famous 'Hand of God' goal in 1986?",o:["Pelé","Diego Maradona","Lionel Messi","Cristiano Ronaldo"],a:1},
 {q:"Which club plays their home games at Old Trafford?",o:["Liverpool","Manchester City","Manchester United","Chelsea"],a:2},
 {q:"What colour cards does a referee have?",o:["Red and Blue","Yellow and Red","Green and Yellow","Black and White"],a:1},
 {q:"Which country has won the most World Cups (5 times)?",o:["Germany","Italy","Argentina","Brazil"],a:3},
-{q:"Who is Arsenal's all-time top scorer with 185 goals?",o:["Thierry Henry","Dennis Bergkamp","Ian Wright","Robin van Persie"],a:0},
 {q:"What position does a player wear the number 1 shirt?",o:["Striker","Goalkeeper","Defender","Midfielder"],a:1},
 {q:"Which player is known as 'CR7'?",o:["Carlos Tevez","Cristiano Ronaldo","Carlos Puyol","Casemiro"],a:1},
 {q:"Which country hosted the 2022 World Cup?",o:["Russia","Qatar","USA","Japan"],a:1},
 {q:"How long is a standard football match (without extra time)?",o:["80 minutes","90 minutes","100 minutes","120 minutes"],a:1},
 {q:"What does VAR stand for?",o:["Video Assistant Referee","Very Angry Referee","Visual Action Replay","Video Action Review"],a:0},
 {q:"Which club's home ground is called Anfield?",o:["Everton","Liverpool","Manchester United","Leeds"],a:1},
-{q:"Who won the 2023 Ballon d'Or (best player in the world)?",o:["Lionel Messi","Erling Haaland","Cristiano Ronaldo","Kylian Mbappé"],a:0},
 {q:"What is the penalty area also known as?",o:["The Box","The Circle","The Zone","The Square"],a:0},
-{q:"Which English club is known as 'The Toffees'?",o:["Liverpool","Everton","Aston Villa","Newcastle"],a:1},
 {q:"How many teams compete in the English Premier League?",o:["16","18","20","22"],a:2},
+{q:"Which player is famous for the 'Siuuu' celebration?",o:["Lionel Messi","Cristiano Ronaldo","Neymar","Kylian Mbappé"],a:1},
+{q:"What is a 'hat-trick' in football?",o:["1 goal in a match","2 goals in a match","3 goals in a match","5 goals in a match"],a:2},
+{q:"Which club plays at the Emirates Stadium?",o:["Tottenham","Chelsea","Arsenal","West Ham"],a:2},
+{q:"Who is the only player to win the World Cup 3 times?",o:["Pelé","Diego Maradona","Lionel Messi","Zinedine Zidane"],a:0},
+{q:"What colour is a card for being sent off?",o:["Yellow","Green","Red","Blue"],a:2},
+{q:"Which country won Euro 2024?",o:["England","France","Spain","Germany"],a:2},
+{q:"Who is Arsenal's current manager (2026)?",o:["Pep Guardiola","Mikel Arteta","Jurgen Klopp","Antonio Conte"],a:1},
+{q:"Which two clubs play in 'El Clásico'?",o:["England vs Germany","Spain vs Portugal","Real Madrid vs Barcelona","Brazil vs Argentina"],a:2},
+{q:"What does 'FT' mean on a football scoreboard?",o:["Full Time","First Touch","Fast Track","Final Timer"],a:0},
+{q:"How many minutes are in each half of a football match?",o:["40 minutes","45 minutes","50 minutes","60 minutes"],a:1},
+{q:"What is the circle in the centre of the pitch called?",o:["Centre Spot","Centre Circle","Middle Ring","Halfway Hoop"],a:1},
 {q:"Which country's national team is called 'Les Bleus' (The Blues)?",o:["Italy","France","Spain","Portugal"],a:1},
+{q:"What is the maximum number of substitutes a team can make in a normal match?",o:["3","4","5","6"],a:2},
+{q:"Which club is nicknamed 'The Magpies'?",o:["Newcastle United","Crystal Palace","Southampton","Brighton"],a:0},
+{q:"What does a yellow card mean?",o:["You're sent off","Warning, second one means sent off","Free kick to the other team","5 minute sin bin"],a:1},
+{q:"Which club won the Premier League in the 2025-26 season?",o:["Arsenal","Manchester City","Liverpool","Chelsea"],a:0},
+];
+
+const MEDIUM = [
+{q:"Who is Arsenal's all-time top scorer with 185 goals?",o:["Thierry Henry","Dennis Bergkamp","Ian Wright","Robin van Persie"],a:0},
+{q:"Who won the 2023 Ballon d'Or (best player in the world)?",o:["Lionel Messi","Erling Haaland","Cristiano Ronaldo","Kylian Mbappé"],a:0},
+{q:"Which English club is known as 'The Toffees'?",o:["Liverpool","Everton","Aston Villa","Newcastle"],a:1},
 {q:"Who scored the most goals in a single Premier League season (36 goals in 2022-23)?",o:["Mohamed Salah","Harry Kane","Erling Haaland","Sergio Agüero"],a:2},
 {q:"What happens if a defender touches the ball with their hand in their own penalty area?",o:["Nothing","Throw-in","Penalty kick","Yellow card only"],a:2},
 {q:"Which club won the first ever Premier League season in 1992-93?",o:["Arsenal","Manchester United","Liverpool","Chelsea"],a:1},
-{q:"Which player is famous for the 'Siuuu' celebration?",o:["Lionel Messi","Cristiano Ronaldo","Neymar","Kylian Mbappé"],a:1},
-{q:"What is the maximum number of substitutes a team can make in a normal match?",o:["3","4","5","6"],a:2},
-{q:"Which club plays at the Emirates Stadium?",o:["Tottenham","Chelsea","Arsenal","West Ham"],a:2},
-{q:"Who is the only player to win the World Cup 3 times?",o:["Pelé","Diego Maradona","Lionel Messi","Zinedine Zidane"],a:0},
-{q:"What colour is a goalkeeper's card for being sent off?",o:["Yellow","Green","Red","Blue"],a:2},
-{q:"Which country won Euro 2024?",o:["England","France","Spain","Germany"],a:2},
-{q:"Who is Arsenal's current manager (2026)?",o:["Pep Guardiola","Mikel Arteta","Jurgen Klopp","Antonio Conte"],a:1},
-{q:"What is a 'hat-trick' in football?",o:["1 goal in a match","2 goals in a match","3 goals in a match","5 goals in a match"],a:2},
-{q:"Which two countries play in 'El Clásico'?",o:["England vs Germany","Spain vs Portugal","Real Madrid vs Barcelona","Brazil vs Argentina"],a:2},
 {q:"Who is England's all-time top scorer?",o:["Wayne Rooney","Harry Kane","Gary Lineker","Bobby Charlton"],a:1},
-{q:"What does 'FT' mean on a football scoreboard?",o:["Full Time","First Touch","Fast Track","Final Timer"],a:0},
-{q:"Which club is nicknamed 'The Reds' and plays at Anfield?",o:["Manchester United","Liverpool","Nottingham Forest","Bristol City"],a:1},
-{q:"How far is the penalty spot from the goal line?",o:["10 yards (9m)","11 metres (12 yards)","12 yards (11m)","18 yards (16m)"],a:2},
+{q:"Which club is known as 'The Reds' and plays at Anfield?",o:["Manchester United","Liverpool","Nottingham Forest","Bristol City"],a:1},
+{q:"How far is the penalty spot from the goal line?",o:["10 yards (9m)","12 yards (11m)","11 metres (12 yards)","18 yards (16m)"],a:2},
 {q:"Which player scored the fastest hat-trick in Premier League history (2 mins 14 secs)?",o:["Sadio Mané","Robbie Fowler","Sergio Agüero","Alan Shearer"],a:0},
 {q:"What is the offside rule triggered by?",o:["Being in the opponent's half","Being behind the last defender when the ball is passed","Touching the ball with hands","Arguing with the referee"],a:1},
 {q:"Which club won the Champions League in 2024?",o:["Manchester City","Real Madrid","Bayern Munich","PSG"],a:1},
-{q:"Who scored the winning goal in the 2022 World Cup Final?",o:["Lionel Messi","Kylian Mbappé","Ángel Di María","Gonzalo Montiel"],a:3},
-{q:"What does a yellow card mean?",o:["You're sent off","Warning — second one means sent off","Free kick to the other team","5 minute sin bin"],a:1},
+{q:"Who scored the winning penalty in the 2022 World Cup Final?",o:["Lionel Messi","Kylian Mbappé","Ángel Di María","Gonzalo Montiel"],a:3},
 {q:"Which country has never won a World Cup?",o:["Brazil","Germany","Netherlands","Italy"],a:2},
 {q:"Who is Tottenham's all-time top scorer?",o:["Harry Kane","Son Heung-min","Jimmy Greaves","Robbie Keane"],a:2},
 {q:"What is the width of a standard football goal (between the posts)?",o:["24 feet (7.32m)","20 feet (6.1m)","28 feet (8.5m)","18 feet (5.5m)"],a:0},
 {q:"Which manager famously said 'Football, bloody hell!'?",o:["Alex Ferguson","Arsène Wenger","José Mourinho","Pep Guardiola"],a:0},
-{q:"Which club is known as 'The Magpies'?",o:["Newcastle United","Crystal Palace","Southampton","Brighton"],a:0},
-{q:"Who scored the Golden Boot at the 2022 World Cup (8 goals)?",o:["Lionel Messi","Kylian Mbappé","Julián Álvarez","Olivier Giroud"],a:1},
+{q:"Who won the Golden Boot at the 2022 World Cup (8 goals)?",o:["Lionel Messi","Kylian Mbappé","Julián Álvarez","Olivier Giroud"],a:1},
 {q:"What does 'FIFA' stand for?",o:["Federation of International Football Associations","Fédération Internationale de Football Association","Football International Federation Association","Federation of International Football Academies"],a:1},
-{q:"Which Arsenal player is known for being fouled a lot and is nicknamed 'Starboy'?",o:["Bukayo Saka","Gabriel Martinelli","Martin Ødegaard","Declan Rice"],a:0},
-{q:"How many minutes are in each half of a football match?",o:["40 minutes","45 minutes","50 minutes","60 minutes"],a:1},
-{q:"Which club won the Premier League in the 2025-26 season?",o:["Arsenal","Manchester City","Liverpool","Chelsea"],a:0},
-{q:"What is the circle in the centre of the pitch called?",o:["Centre Spot","Centre Circle","Middle Ring","Halfway Hoop"],a:1},
+{q:"Which Arsenal player is nicknamed 'Starboy'?",o:["Bukayo Saka","Gabriel Martinelli","Martin Ødegaard","Declan Rice"],a:0},
+{q:"Who scored the 'Goal of the Century' in the 1986 World Cup (dribbling past 5 players)?",o:["Pelé","Diego Maradona","Lionel Messi","Johan Cruyff"],a:1},
+{q:"Which club has won the most Champions League titles (15 as of 2024)?",o:["Barcelona","Real Madrid","AC Milan","Liverpool"],a:1},
+{q:"Who is the youngest player ever to score in a World Cup final?",o:["Kylian Mbappé","Pelé","Lionel Messi","Ronaldo Nazário"],a:1},
+{q:"Which goalkeeper has the most clean sheets in Premier League history?",o:["David Seaman","Petr Čech","David de Gea","Edwin van der Sar"],a:1},
+{q:"What is 'Fergie Time'?",o:["Extra time added by Alex Ferguson","Injury time when Man United scored late goals","A type of formation","A tactical substitution"],a:1},
+{q:"Who scored the goal that won Arsenal the Premier League at Old Trafford in 2002?",o:["Sylvain Wiltord","Thierry Henry","Robert Pires","Freddie Ljungberg"],a:0},
+{q:"Which country's league is called 'Serie A'?",o:["Spain","Italy","France","Germany"],a:1},
+{q:"Who is the all-time top scorer in Champions League history?",o:["Lionel Messi","Cristiano Ronaldo","Robert Lewandowski","Karim Benzema"],a:1},
+{q:"What is 'The Treble'?",o:["Winning 3 league games in a row","Winning league, domestic cup, and Champions League in one season","Scoring 3 hat-tricks in a season","Having 3 players sent off"],a:1},
+{q:"Which club did Erling Haaland join before Manchester City?",o:["RB Leipzig","Borussia Dortmund","Red Bull Salzburg","Molde"],a:1},
 ];
+
+const HARD = [
+{q:"Who was the first player to score 100 Premier League goals for a single club?",o:["Alan Shearer","Thierry Henry","Wayne Rooney","Frank Lampard"],a:1},
+{q:"Which country hosted the 2010 World Cup (the first in Africa)?",o:["Egypt","Morocco","South Africa","Nigeria"],a:2},
+{q:"Who scored the fastest goal in World Cup history (after 11 seconds vs Turkey 2002)?",o:["Ronaldo Nazário","Hakan Şükür","Ronaldinho","Miroslav Klose"],a:1},
+{q:"Which manager invented 'Total Football' with Ajax in the 1970s?",o:["Johan Cruyff","Rinus Michels","Marcelo Bielsa","Arrigo Sacchi"],a:1},
+{q:"Who is the only player to score in 4 different World Cup tournaments for England?",o:["Wayne Rooney","David Beckham","Harry Kane","Gary Lineker"],a:2},
+{q:"Which club was the first to win the European Cup 3 times in a row (1970-72)?",o:["Real Madrid","Bayern Munich","Ajax","Liverpool"],a:2},
+{q:"Who scored Arsenal's famous 89th minute winner at Anfield to win the league in 1989?",o:["Alan Smith","Michael Thomas","Lee Dixon","Paul Merson"],a:1},
+{q:"What is the 'Panenka' penalty?",o:["A powerful shot to the top corner","A chip down the middle","A low shot to the corner","A penalty that hits the post and goes in"],a:1},
+{q:"Who is the most capped England player of all time?",o:["Wayne Rooney","David Beckham","Peter Shilton","Steven Gerrard"],a:2},
+{q:"Which club won the inaugural Champions League in 1992-93 (rebranding from European Cup)?",o:["AC Milan","Marseille","Barcelona","Ajax"],a:1},
+{q:"Who scored the winning goal for Arsenal in the 2017 FA Cup Final against Chelsea?",o:["Aaron Ramsey","Alexis Sánchez","Olivier Giroud","Danny Welbeck"],a:0},
+{q:"Which player won the Ballon d'Or 5 times in a row (2009-2012, 2015)?",o:["Cristiano Ronaldo","Lionel Messi","Andrés Iniesta","Xavi"],a:1},
+{q:"Who is the all-time top scorer for Brazil?",o:["Ronaldo Nazário","Pelé","Neymar","Romário"],a:2},
+{q:"Which two English clubs have won the Treble (league, FA Cup, Champions League)?",o:["Liverpool and Chelsea","Manchester United and Manchester City","Arsenal and Liverpool","Chelsea and Manchester City"],a:1},
+{q:"Who scored the goal that won Leicester City the Premier League in 2016?",o:["Jamie Vardy","Riyad Mahrez","Danny Drinkwater","Christian Fuchs"],a:0},
+{q:"Which goalkeeper has the most caps for England?",o:["David Seaman","Peter Shilton","Joe Hart","Gordon Banks"],a:1},
+{q:"Who is the only manager to win the Premier League with two different clubs?",o:["José Mourinho","Pep Guardiola","Alex Ferguson","Arsène Wenger"],a:0},
+{q:"Which country knocked Brazil out of the 2014 World Cup 7-1 in the semi-final?",o:["Argentina","Netherlands","Germany","Spain"],a:2},
+{q:"Who scored both goals in Arsenal's 2-0 win over Chelsea in the 2002 FA Cup Final?",o:["Thierry Henry","Sylvain Wiltord and Freddie Ljungberg","Ray Parlour and Sylvain Wiltord","Robert Pires and Patrick Vieira"],a:2},
+{q:"What was the score in the 2014 World Cup Final between Germany and Argentina?",o:["1-0","2-1","3-0","7-1"],a:0},
+{q:"Who is the all-time top scorer in World Cup history (16 goals)?",o:["Ronaldo Nazário","Miroslav Klose","Pelé","Gerd Müller"],a:1},
+{q:"Which club did Arsène Wenger manage before Arsenal?",o:["AS Monaco","Nagoya Grampus","Paris Saint-Germain","Lyon"],a:1},
+{q:"Who scored the 'Invincibles' Arsenal's only goal in their last unbeaten game (2004)?",o:["Thierry Henry","Patrick Vieira","Robert Pires","Ashley Cole"],a:1},
+{q:"Which player has the most assists in Premier League history?",o:["Cesc Fàbregas","Wayne Rooney","Ryan Giggs","Kevin De Bruyne"],a:2},
+{q:"Who was the first £1 million British footballer (transferred in 1979)?",o:["Kevin Keegan","Trevor Francis","Bryan Robson","Mark Hughes"],a:1},
+{q:"Which Arsenal defender scored the equaliser in the 1989 title decider at Anfield before Michael Thomas's winner?",o:["Tony Adams","Lee Dixon","Alan Smith","Steve Bould"],a:2},
+{q:"Who scored the Golden Goal that won Germany the 1996 European Championship?",o:["Jürgen Klinsmann","Oliver Bierhoff","Matthias Sammer","Andreas Möller"],a:1},
+{q:"Which club holds the record for most consecutive Premier League wins (18 in 2017-18)?",o:["Manchester City","Chelsea","Liverpool","Manchester United"],a:0},
+{q:"Who was the youngest player to appear in a World Cup final (17 years old in 1958)?",o:["Pelé","Diego Maradona","Lionel Messi","Norman Whiteside"],a:0},
+{q:"Which Arsenal goalkeeper kept the most clean sheets in the 2003-04 Invincibles season?",o:["David Seaman","Jens Lehmann","Manuel Almunia","Stuart Taylor"],a:1},
+];
+
+const LEGEND = [
+{q:"Who scored the winning goal in Arsenal's last ever game at Highbury (2006)?",o:["Thierry Henry","Robert Pires","Cesc Fàbregas","Robin van Persie"],a:1},
+{q:"Which player scored 5 goals in a single Premier League match (vs Newcastle, 1999)?",o:["Alan Shearer","Andy Cole","Dimitar Berbatov","Sergio Agüero"],a:1},
+{q:"Who is the only player to score a hat-trick in a Champions League final (for AC Milan, 2005)?",o:["Andriy Shevchenko","Hernán Crespo","Paolo Maldini","Filippo Inzaghi"],a:1},
+{q:"Which country knocked England out of the 1990 World Cup on penalties in the semi-final?",o:["Argentina","West Germany","Italy","Brazil"],a:1},
+{q:"Who scored the first ever Premier League goal (Sheffield United vs Manchester United, 1992)?",o:["Eric Cantona","Brian Deane","Ryan Giggs","Mark Hughes"],a:1},
+{q:"Which Arsenal player's goal against Liverpool in 1989 won the league with the last kick of the season?",o:["Alan Smith","Michael Thomas","Paul Merson","Lee Dixon"],a:1},
+{q:"Who is the only goalkeeper to win the Ballon d'Or (in 1963)?",o:["Gordon Banks","Lev Yashin","Dino Zoff","Oliver Kahn"],a:1},
+{q:"Which club has won the most FA Cups (14 as of 2026)?",o:["Manchester United","Arsenal","Chelsea","Tottenham"],a:1},
+{q:"Who scored the goal that ended Arsenal's 49-game unbeaten run (Manchester United, 2004)?",o:["Wayne Rooney","Ruud van Nistelrooy","Cristiano Ronaldo","Paul Scholes"],a:1},
+{q:"Which manager took Iceland to the Euro 2016 quarter-finals, beating England in the last 16?",o:["Lars Lagerbäck","Heimir Hallgrímsson","Ólafur Johannesson","Eyjólfur Sverrisson"],a:1},
+{q:"Who scored the fastest goal in Champions League history (10.96 seconds, Bayern vs Real Madrid 2017)?",o:["Robert Lewandowski","Thomas Müller","Arjen Robben","Roy Makaay"],a:3},
+{q:"Which two players were sent off for Arsenal vs Manchester United in the 'Battle of the Buffet' (2004)?",o:["Vieira and Keane","Vieira and van Nistelrooy","Campbell and Rooney","Cole and Ronaldo"],a:1},
+{q:"Who is the only player to score in 6 consecutive Premier League games for Arsenal?",o:["Thierry Henry","Ian Wright","Emmanuel Adebayor","Pierre-Emerick Aubameyang"],a:0},
+{q:"Which country won the first ever European Championship in 1960?",o:["Spain","Italy","Soviet Union","Yugoslavia"],a:2},
+{q:"Who scored the goal that won Wigan Athletic the FA Cup against Manchester City in 2013?",o:["Arouna Koné","Callum McManaman","Ben Watson","Shaun Maloney"],a:2},
+{q:"Which player has scored the most goals in North London Derby history?",o:["Harry Kane","Thierry Henry","Alan Sunderland","Robert Pires"],a:0},
+{q:"Who was the first manager to win the World Cup twice (1934 and 1938)?",o:["Vittorio Pozzo","Helenio Herrera","Sepp Herberger","Guszti Sebes"],a:0},
+{q:"Which club did Chelsea beat 8-0 to win the 2010 Premier League on the final day?",o:["Wigan Athletic","Stoke City","Portsmouth","Blackburn Rovers"],a:0},
+{q:"Who scored the goal that won Manchester City the 2012 Premier League title (vs QPR, 93:20)?",o:["Mario Balotelli","Edin Džeko","Sergio Agüero","Carlos Tevez"],a:2},
+{q:"Which Arsenal player scored the winning penalty in the 2005 FA Cup Final shootout against Manchester United?",o:["Patrick Vieira","Thierry Henry","Robert Pires","Cesc Fàbregas"],a:0},
+{q:"Who is the only player to score for two different countries in World Cup history?",o:["Alfredo Di Stéfano","Luis Monti","Ferenc Puskás","Dejan Savićević"],a:1},
+{q:"Which club was the last team other than Real Madrid, Barcelona, or Atlético Madrid to win La Liga (2003-04)?",o:["Sevilla","Valencia","Deportivo La Coruña","Real Sociedad"],a:1},
+{q:"Who scored the winning goal in the 1999 Champions League Final for Manchester United in stoppage time?",o:["Ryan Giggs","Ole Gunnar Solskjær","Teddy Sheringham","David Beckham"],a:1},
+{q:"Which Arsenal player wore the famous number 14 shirt after Thierry Henry left?",o:["Robin van Persie","Cesc Fàbregas","Theo Walcott","Aaron Ramsey"],a:2},
+{q:"Who was the first team to score 100+ goals in a single Premier League season (2009-10)?",o:["Manchester United","Chelsea","Arsenal","Manchester City"],a:1},
+{q:"Which goalkeeper saved two penalties in the 2006 World Cup Final shootout between Italy and France?",o:["Gianluigi Buffon","Fabien Barthez","Francesco Toldo","Dida"],a:0},
+{q:"Who scored the last goal at Arsenal's old Highbury stadium?",o:["Thierry Henry","Robert Pires","Cesc Fàbregas","Dennis Bergkamp"],a:1},
+{q:"Which player won the Premier League Golden Boot in 2020-21 with 23 goals?",o:["Mohamed Salah","Harry Kane","Bruno Fernandes","Son Heung-min"],a:1},
+{q:"Who was the first non-British manager to win the Premier League (with Blackburn in 1995)?",o:["Arsène Wenger","Gérard Houllier","Kenny Dalglish","Sven-Göran Eriksson"],a:2},
+{q:"Which club reached the Champions League final for the first time in their history in 2024 (and lost to Real Madrid)?",o:["Atlético Madrid","PSG","Inter Milan","Napoli"],a:1},
+];
+
+const LEVELS = {
+easy: { questions: EASY, time: 20, label: "EASY", class: "level-easy" },
+medium: { questions: MEDIUM, time: 15, label: "MEDIUM", class: "level-medium" },
+hard: { questions: HARD, time: 10, label: "HARD", class: "level-hard" },
+legend: { questions: LEGEND, time: 8, label: "LEGEND", class: "level-legend" },
+};
 
 let state = {};
 let timerInterval;
@@ -176,30 +305,45 @@ function soundWrong() { beep(220, 0.15, 'sawtooth', 0.2); setTimeout(() => beep(
 function soundTick() { beep(800, 0.05, 'square', 0.08); }
 function soundDing() { beep(880, 0.1); setTimeout(() => beep(1100, 0.15), 100); }
 function soundEnd() { beep(523, 0.1); setTimeout(() => beep(659, 0.1), 100); setTimeout(() => beep(784, 0.1), 200); setTimeout(() => beep(1046, 0.3), 300); }
+function soundStreak() { beep(659, 0.08); setTimeout(() => beep(784, 0.08), 80); setTimeout(() => beep(988, 0.08), 160); setTimeout(() => beep(1318, 0.2), 240); }
 
 function toggleMute() {
     soundOn = !soundOn;
     document.getElementById('muteBtn').textContent = soundOn ? '🔊' : '🔇';
 }
 
-function startGame() {
+function showDifficulty() {
     initAudio();
     soundDing();
+    showScreen('diffScreen');
+}
+
+function startGame(level) {
+    initAudio();
+    soundDing();
+    const lvl = LEVELS[level];
     state = {
+        level: level,
         p1Name: document.getElementById('player1').value.trim() || 'Player 1',
         p2Name: document.getElementById('player2').value.trim() || 'Player 2',
         p1Score: 0,
         p2Score: 0,
+        p1Streak: 0,
+        p2Streak: 0,
         currentPlayer: 0,
         questionNum: 0,
         questionsPerPlayer: 10,
-        selectedQuestions: shuffle([...QUESTIONS]).slice(0, 20),
+        selectedQuestions: shuffle([...lvl.questions]).slice(0, 20),
+        timePerQuestion: lvl.time,
         answered: false,
     };
     document.getElementById('name1').textContent = state.p1Name;
     document.getElementById('name2').textContent = state.p2Name;
     document.getElementById('score1').textContent = 0;
     document.getElementById('score2').textContent = 0;
+    const badge = document.getElementById('levelBadge');
+    badge.textContent = lvl.label;
+    badge.className = 'level-badge ' + lvl.class;
     showScreen('quizScreen');
     nextQuestion();
 }
@@ -220,18 +364,19 @@ function nextQuestion() {
     state.answered = false;
     const q = state.selectedQuestions[state.questionNum];
     const playerName = state.currentPlayer === 0 ? state.p1Name : state.p2Name;
-    const playerEmoji = state.currentPlayer === 0 ? '👨' : '👦';
 
     document.getElementById('turnName').textContent = playerName;
     document.getElementById('questionNum').textContent = `Question ${state.questionNum + 1} of ${state.selectedQuestions.length}`;
     document.getElementById('feedback').textContent = '';
     document.getElementById('feedback').className = 'feedback';
 
-    // Highlight active player
+    const p1Streak = state.p1Streak >= 3 ? `🔥 ${state.p1Name} on a ${state.p1Streak} streak!` : '';
+    const p2Streak = state.p2Streak >= 3 ? `🔥 ${state.p2Name} on a ${state.p2Streak} streak!` : '';
+    document.getElementById('streakDisplay').textContent = p1Streak || p2Streak;
+
     document.getElementById('pill1').classList.toggle('active', state.currentPlayer === 0);
     document.getElementById('pill2').classList.toggle('active', state.currentPlayer === 1);
 
-    // Shuffle options
     const options = q.o.map((text, i) => ({ text, correct: i === q.a }));
     shuffle(options);
 
@@ -256,7 +401,7 @@ function nextQuestion() {
 }
 
 function startTimer() {
-    let timeLeft = 15;
+    let timeLeft = state.timePerQuestion;
     const fill = document.getElementById('timerFill');
     const text = document.getElementById('timerText');
     fill.style.width = '100%';
@@ -264,7 +409,7 @@ function startTimer() {
     clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         timeLeft--;
-        const pct = (timeLeft / 15) * 100;
+        const pct = (timeLeft / state.timePerQuestion) * 100;
         fill.style.width = pct + '%';
         text.textContent = `⏱ ${timeLeft} seconds`;
         if (timeLeft <= 5) { fill.classList.add('danger'); if (timeLeft > 0) soundTick(); }
@@ -279,13 +424,21 @@ function startTimer() {
 function timeUp() {
     if (state.answered) return;
     state.answered = true;
+    const currentQ = state.selectedQuestions[state.questionNum];
     const options = document.querySelectorAll('.option');
     options.forEach(o => {
         o.classList.add('disabled');
-        if (o.textContent === QUESTIONS.find(q => q.q === document.getElementById('questionText').textContent).o[QUESTIONS.find(q => q.q === document.getElementById('questionText').textContent).a]) {
-            o.classList.add('reveal');
-        }
     });
+    options.forEach((o, i) => {
+        const opts = document.getElementById('options');
+        const allOpts = Array.from(opts.children);
+        allOpts.forEach((btn, idx) => {
+            const correctText = currentQ.o[currentQ.a];
+            if (btn.textContent === correctText) btn.classList.add('reveal');
+        });
+    });
+    if (state.currentPlayer === 0) state.p1Streak = 0;
+    else state.p2Streak = 0;
     document.getElementById('feedback').textContent = `⏰ Time's up! ⚽`;
     document.getElementById('feedback').className = 'feedback wrong';
     soundWrong();
@@ -300,17 +453,30 @@ function selectAnswer(btn, correct, allOptions) {
 
     if (correct) {
         btn.classList.add('correct');
-        if (state.currentPlayer === 0) { state.p1Score++; document.getElementById('score1').textContent = state.p1Score; }
-        else { state.p2Score++; document.getElementById('score2').textContent = state.p2Score; }
-        document.getElementById('feedback').textContent = '✅ Correct! Brilliant! ⚽';
+        if (state.currentPlayer === 0) {
+            state.p1Score++;
+            state.p1Streak++;
+            document.getElementById('score1').textContent = state.p1Score;
+            if (state.p1Streak >= 3) soundStreak();
+        } else {
+            state.p2Score++;
+            state.p2Streak++;
+            document.getElementById('score2').textContent = state.p2Score;
+            if (state.p2Streak >= 3) soundStreak();
+        }
+        const praises = ['✅ Correct! Brilliant! ⚽','✅ Top class! 🌟','✅ Football genius! 🧠','✅ Sensational! 🔥','✅ You nailed it! ⚡'];
+        document.getElementById('feedback').textContent = praises[Math.floor(Math.random() * praises.length)];
         document.getElementById('feedback').className = 'feedback correct';
-        soundCorrect();
+        if (state.p1Streak < 3 && state.p2Streak < 3) soundCorrect();
     } else {
         btn.classList.add('wrong');
         allOptions.forEach((opt, i) => {
             if (opt.correct) document.querySelectorAll('.option')[i].classList.add('reveal');
         });
-        document.getElementById('feedback').textContent = '❌ Oops! The correct answer is highlighted in green.';
+        if (state.currentPlayer === 0) state.p1Streak = 0;
+        else state.p2Streak = 0;
+        const wrongs = ['❌ Oops! The correct answer is highlighted in green.','❌ Not quite! Good try though.','❌ Close but no cigar! See the answer in green.','❌ Unlucky! Check the correct answer below.'];
+        document.getElementById('feedback').textContent = wrongs[Math.floor(Math.random() * wrongs.length)];
         document.getElementById('feedback').className = 'feedback wrong';
         soundWrong();
     }
@@ -341,16 +507,17 @@ function showResults() {
         msg = "You're both football legends! Play again to break the tie!";
     }
 
+    const lvl = LEVELS[state.level];
     document.getElementById('resultEmoji').textContent = emoji;
     document.getElementById('winnerBadge').textContent = winner;
-    document.getElementById('finalScores').innerHTML = `👨 ${state.p1Name}: <strong>${state.p1Score}</strong> &nbsp; vs &nbsp; 👦 ${state.p2Name}: <strong>${state.p2Score}</strong>`;
+    document.getElementById('finalScores').innerHTML = `👨 ${state.p1Name}: <strong>${state.p1Score}</strong> &nbsp; vs &nbsp; 👦 ${state.p2Name}: <strong>${state.p2Score}</strong><br><span style="font-size:0.7em;opacity:0.6">Level: ${lvl.label}</span>`;
     document.getElementById('resultMessage').textContent = msg;
     showScreen('resultsScreen');
 }
 
 function restartGame() {
     soundDing();
-    showScreen('startScreen');
+    showScreen('diffScreen');
 }
 
 function showScreen(id) {
